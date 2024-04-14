@@ -5,7 +5,8 @@ def main():
     duration = 10
     interval = '1s'
     replace_existing = True
-    stream_to_db(duration=duration,
+    stream_to_db(symbol='ethusdt',
+                 duration=duration,
                  interval=interval,
                  replace_existing=replace_existing)
 

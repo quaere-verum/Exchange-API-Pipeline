@@ -10,21 +10,24 @@ connection_string = f"postgresql://localhost/Crypto?user=postgres&password={SQL_
 db = sa.create_engine(connection_string)
 Session = sessionmaker(bind=db)
 Base = declarative_base(metadata=sa.MetaData(schema='TickerData'))
-symbol = 'ethusdt'
 
 
-class Kline(Base):
-    __tablename__ = symbol
-    timestamp: Mapped[int] = mapped_column(primary_key=True)
-    close: Mapped[float]
-    base_asset_volume: Mapped[float]
-    quote_asset_volume: Mapped[float]
-    taker_buy_base_asset_volume: Mapped[float]
-    taker_buy_quote_asset_volume: Mapped[float]
-    nr_trades: Mapped[int]
+def create_kline_table(symbol):
+    class Kline(Base):
+        __tablename__ = symbol
+        timestamp: Mapped[int] = mapped_column(primary_key=True)
+        close: Mapped[float]
+        base_asset_volume: Mapped[float]
+        quote_asset_volume: Mapped[float]
+        taker_buy_base_asset_volume: Mapped[float]
+        taker_buy_quote_asset_volume: Mapped[float]
+        nr_trades: Mapped[int]
+    return Kline
 
 
-def kline_stream_handler(session):
+def kline_stream_handler(symbol, session):
+    Kline = create_kline_table(symbol)
+
     def message_handler(_, message):
         info = json.loads(message)['data']
         data = {'timestamp': info['k']['T']//1000 + 1,
@@ -41,16 +44,17 @@ def kline_stream_handler(session):
     return message_handler
 
 
-def stream_data(duration, interval, session):
-    client = SpotWebsocketStreamClient(on_message=kline_stream_handler(session), is_combined=True)
+def stream_data(duration, interval, session, symbol):
+    client = SpotWebsocketStreamClient(on_message=kline_stream_handler(symbol=symbol, session=session),
+                                       is_combined=True)
     client.kline(symbol=symbol, interval=interval)
     time.sleep(duration)
     client.stop()
 
 
-def stream_to_db(duration, interval, replace_existing=True):
+def stream_to_db(symbol, duration, interval, replace_existing=True):
     if replace_existing:
         Base.metadata.drop_all(db)
     Base.metadata.create_all(db)
     with Session() as session:
-        stream_data(duration=duration, interval=interval, session=session)
+        stream_data(duration=duration, interval=interval, session=session, symbol=symbol)
