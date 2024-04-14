@@ -3,17 +3,10 @@ import json
 from sqlalchemy.orm import sessionmaker, declarative_base, Mapped, mapped_column
 import sqlalchemy as sa
 import time
-import os
-SQL_PASSWORD = os.environ['SQL_PASSWORD']
-
-connection_string = f"postgresql://localhost/Crypto?user=postgres&password={SQL_PASSWORD}"
-db = sa.create_engine(connection_string)
-Session = sessionmaker(bind=db)
-Base = declarative_base(metadata=sa.MetaData(schema='TickerData'))
 
 
-def create_kline_table(symbol):
-    class Kline(Base):
+def create_kline_table(symbol, base):
+    class Kline(base):
         __tablename__ = symbol
         timestamp: Mapped[int] = mapped_column(primary_key=True)
         close: Mapped[float]
@@ -25,8 +18,8 @@ def create_kline_table(symbol):
     return Kline
 
 
-def kline_stream_handler(symbol, session):
-    Kline = create_kline_table(symbol)
+def kline_stream_handler(symbol, session, base):
+    Kline = create_kline_table(symbol, base)
 
     def message_handler(_, message):
         info = json.loads(message)['data']
@@ -44,17 +37,20 @@ def kline_stream_handler(symbol, session):
     return message_handler
 
 
-def stream_data(duration, interval, session, symbol):
-    client = SpotWebsocketStreamClient(on_message=kline_stream_handler(symbol=symbol, session=session),
+def stream_data(duration, interval, session, symbol, base):
+    client = SpotWebsocketStreamClient(on_message=kline_stream_handler(symbol=symbol, session=session, base=base),
                                        is_combined=True)
     client.kline(symbol=symbol, interval=interval)
     time.sleep(duration)
     client.stop()
 
 
-def stream_to_db(symbol, duration, interval, replace_existing=True):
+def stream_to_db(symbol, duration, interval, connection_string, replace_existing=True):
+    db = sa.create_engine(connection_string)
+    Session = sessionmaker(bind=db)
+    Base = declarative_base(metadata=sa.MetaData(schema='TickerData'))
     if replace_existing:
         Base.metadata.drop_all(db)
     Base.metadata.create_all(db)
     with Session() as session:
-        stream_data(duration=duration, interval=interval, session=session, symbol=symbol)
+        stream_data(duration=duration, interval=interval, session=session, symbol=symbol, base=Base)
