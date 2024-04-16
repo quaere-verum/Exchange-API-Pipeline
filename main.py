@@ -7,7 +7,7 @@ def main():
     duration = 10
     interval = '1s'
     connection_string = f"postgresql://localhost/Crypto?user=postgres&password={SQL_PASSWORD}"
-    replace_existing = True
+    replace_existing = False
     stream_to_db(symbol='ethusdt',
                  duration=duration,
                  interval=interval,
