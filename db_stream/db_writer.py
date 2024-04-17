@@ -18,7 +18,7 @@ def create_kline_table(symbol, base):
     return Kline
 
 
-def kline_stream_handler(symbol, session, base):
+def kline_stream_handler(symbol, session, base, trading_mode=False):
     Kline = create_kline_table(symbol, base)
 
     def message_handler(_, message):
@@ -34,6 +34,7 @@ def kline_stream_handler(symbol, session, base):
         kline = Kline(**data)
         session.add(kline)
         session.commit()
+
     return message_handler
 
 
