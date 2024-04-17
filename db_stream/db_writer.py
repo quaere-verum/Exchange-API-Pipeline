@@ -18,8 +18,7 @@ def create_kline_table(symbol, base):
     return Kline
 
 
-def kline_stream_handler(symbol, session, base, trading_mode=False):
-    Kline = create_kline_table(symbol, base)
+def kline_stream_handler(session, table):
 
     def message_handler(_, message):
         info = json.loads(message)['data']
@@ -31,15 +30,15 @@ def kline_stream_handler(symbol, session, base, trading_mode=False):
                 'taker_buy_quote_asset_volume': info['k']['Q'],
                 'nr_trades': info['k']['n']
                 }
-        kline = Kline(**data)
+        kline = table(**data)
         session.add(kline)
         session.commit()
 
     return message_handler
 
 
-def stream_data(duration, interval, session, symbol, base):
-    client = SpotWebsocketStreamClient(on_message=kline_stream_handler(symbol=symbol, session=session, base=base),
+def stream_data(duration, interval, session, symbol, table):
+    client = SpotWebsocketStreamClient(on_message=kline_stream_handler(session=session, table=table),
                                        is_combined=True)
     client.kline(symbol=symbol, interval=interval)
     time.sleep(duration)
@@ -50,8 +49,9 @@ def stream_to_db(symbol, duration, interval, connection_string, replace_existing
     db = sa.create_engine(connection_string)
     Session = sessionmaker(bind=db)
     Base = declarative_base(metadata=sa.MetaData(schema='TickerData'))
+    Kline = create_kline_table(symbol, Base)
     if replace_existing:
         Base.metadata.drop_all(db)
     Base.metadata.create_all(db)
     with Session() as session:
-        stream_data(duration=duration, interval=interval, session=session, symbol=symbol, base=Base)
+        stream_data(duration=duration, interval=interval, session=session, symbol=symbol, table=Kline)
