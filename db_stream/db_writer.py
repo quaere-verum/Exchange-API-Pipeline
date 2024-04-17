@@ -6,6 +6,19 @@ import time
 from typing import Any, Callable
 
 
+class DataHandler:
+    def __init__(self, table: Any) -> None:
+        self.table = table
+        self.last_updated = None
+
+    def update(self, data: dict, session: Any) -> None:
+        if self.last_updated != data['timestamp']:
+            kline = self.table(**data)
+            session.add(kline)
+            session.commit()
+            self.last_updated = data['timestamp']
+
+
 def create_kline_table(symbol: str, base: Any) -> Any:
     class Kline(base):
         __tablename__ = symbol
@@ -20,6 +33,7 @@ def create_kline_table(symbol: str, base: Any) -> Any:
 
 
 def kline_stream_handler(session: Any, table: Any) -> Callable[[str, str], None]:
+    data_handler = DataHandler(table)
 
     def message_handler(_, message):
         info = json.loads(message)['data']
@@ -31,9 +45,7 @@ def kline_stream_handler(session: Any, table: Any) -> Callable[[str, str], None]
                 'taker_buy_quote_asset_volume': info['k']['Q'],
                 'nr_trades': info['k']['n']
                 }
-        kline = table(**data)
-        session.add(kline)
-        session.commit()
+        data_handler.update(data, session)
 
     return message_handler
 
