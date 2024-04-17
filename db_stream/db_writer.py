@@ -3,9 +3,10 @@ import json
 from sqlalchemy.orm import sessionmaker, declarative_base, Mapped, mapped_column
 import sqlalchemy as sa
 import time
+from typing import Any, Callable
 
 
-def create_kline_table(symbol, base):
+def create_kline_table(symbol: str, base: Any) -> Any:
     class Kline(base):
         __tablename__ = symbol
         timestamp: Mapped[int] = mapped_column(primary_key=True)
@@ -18,7 +19,7 @@ def create_kline_table(symbol, base):
     return Kline
 
 
-def kline_stream_handler(session, table):
+def kline_stream_handler(session: Any, table: Any) -> Callable[[str, str], None]:
 
     def message_handler(_, message):
         info = json.loads(message)['data']
@@ -37,7 +38,7 @@ def kline_stream_handler(session, table):
     return message_handler
 
 
-def stream_data(duration, interval, session, symbol, table):
+def stream_data(duration: int, interval: str, session: Any, symbol: str, table: Any) -> None:
     client = SpotWebsocketStreamClient(on_message=kline_stream_handler(session=session, table=table),
                                        is_combined=True)
     client.kline(symbol=symbol, interval=interval)
@@ -45,7 +46,8 @@ def stream_data(duration, interval, session, symbol, table):
     client.stop()
 
 
-def stream_to_db(symbol, duration, interval, connection_string, replace_existing=True):
+def stream_to_db(symbol: str, duration: int, interval: str, connection_string: str, replace_existing: bool = True)\
+        -> None:
     db = sa.create_engine(connection_string)
     Session = sessionmaker(bind=db)
     Base = declarative_base(metadata=sa.MetaData(schema='TickerData'))
