@@ -56,7 +56,7 @@ class FeatureCalculator:
         self.n_features = 0
         for feature in self.features:
             result = feature(ticker_data)
-            if isinstance(result, (float, int, np.float32, np.int32, np.float64, np.int64):
+            if isinstance(result, (float, int, np.float32, np.int32, np.float64, np.int64)):
                 self.n_features += 1
             else:
                 self.n_features += len(result)

@@ -6,7 +6,7 @@ import time
 from typing import Any, Callable, List, Dict, Iterable
 
 
-class DataHandler:
+class TableHandler:
     def __init__(self, tables: Dict[str, Any]) -> None:
         self.tables = tables
         self.last_updated = dict(zip(tables.keys(), [None for _ in tables]))
@@ -35,7 +35,7 @@ def create_kline_table(table_name: str) -> Any:
 
 
 def kline_stream_handler(session: Any, tables: Any) -> Callable[[str, str], None]:
-    data_handler = DataHandler(tables)
+    table_handler = TableHandler(tables)
 
     def message_handler(_, message):
         info = json.loads(message)['data']
@@ -47,7 +47,7 @@ def kline_stream_handler(session: Any, tables: Any) -> Callable[[str, str], None
                 'taker_buy_quote_asset_volume': info['k']['Q'],
                 'nr_trades': info['k']['n']
                 }
-        data_handler.update(data=data, symbol=info['s'].lower(), session=session)
+        table_handler.update(data=data, symbol=info['s'].lower(), session=session)
 
     return message_handler
 
