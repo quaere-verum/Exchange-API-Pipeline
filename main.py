@@ -4,14 +4,13 @@ SQL_PASSWORD = os.environ['SQL_PASSWORD']
 
 
 def main():
-    duration = 24*60*60
+    duration = 60*60*24
     interval = '1m'
     connection_string = f"postgresql://localhost/Crypto?user=postgres&password={SQL_PASSWORD}"
-    replace_existing = False
-    symbol = 'ethusdt'
-    table_name = symbol + '_' + interval
-    stream_to_db(symbol=symbol,
-                 table_name=table_name,
+    replace_existing = True
+    symbols = ['ethusdt', 'btcusdt']
+    symbols_to_table_names = dict(zip(symbols, [symbol + '_' + interval for symbol in symbols]))
+    stream_to_db(symbols_to_table_names=symbols_to_table_names,
                  duration=duration,
                  interval=interval,
                  connection_string=connection_string,

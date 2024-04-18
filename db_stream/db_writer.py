@@ -3,24 +3,26 @@ import json
 from sqlalchemy.orm import sessionmaker, declarative_base, Mapped, mapped_column
 import sqlalchemy as sa
 import time
-from typing import Any, Callable
+from typing import Any, Callable, List, Dict, Iterable
 
 
 class DataHandler:
-    def __init__(self, table: Any) -> None:
-        self.table = table
-        self.last_updated = None
+    def __init__(self, tables: Dict[str, Any]) -> None:
+        self.tables = tables
+        self.last_updated = dict(zip(tables.keys(), [None for _ in tables]))
 
-    def update(self, data: dict, session: Any) -> None:
-        if self.last_updated != data['timestamp']:
-            kline = self.table(**data)
+    def update(self, data: dict, symbol: str, session: Any) -> None:
+        if self.last_updated[symbol.lower()] != data['timestamp']:
+            kline = self.tables[symbol](**data)
             session.add(kline)
             session.commit()
-            self.last_updated = data['timestamp']
+            self.last_updated[symbol.lower()] = data['timestamp']
 
 
-def create_kline_table(table_name: str, base: Any) -> Any:
-    class Kline(base):
+def create_kline_table(table_name: str) -> Any:
+    Base = declarative_base(metadata=sa.MetaData(schema='TickerData'), class_registry=dict())
+
+    class Kline(Base):
         __tablename__ = table_name
         timestamp: Mapped[int] = mapped_column(primary_key=True)
         close: Mapped[float]
@@ -32,8 +34,8 @@ def create_kline_table(table_name: str, base: Any) -> Any:
     return Kline
 
 
-def kline_stream_handler(session: Any, table: Any) -> Callable[[str, str], None]:
-    data_handler = DataHandler(table)
+def kline_stream_handler(session: Any, tables: Any) -> Callable[[str, str], None]:
+    data_handler = DataHandler(tables)
 
     def message_handler(_, message):
         info = json.loads(message)['data']
@@ -45,27 +47,31 @@ def kline_stream_handler(session: Any, table: Any) -> Callable[[str, str], None]
                 'taker_buy_quote_asset_volume': info['k']['Q'],
                 'nr_trades': info['k']['n']
                 }
-        data_handler.update(data, session)
+        data_handler.update(data=data, symbol=info['s'].lower(), session=session)
 
     return message_handler
 
 
-def stream_data(duration: int, interval: str, session: Any, symbol: str, table: Any) -> None:
-    client = SpotWebsocketStreamClient(on_message=kline_stream_handler(session=session, table=table),
+def stream_data(duration: int, interval: str, session: Any, symbols: Iterable, tables: Any) -> None:
+    client = SpotWebsocketStreamClient(on_message=kline_stream_handler(session=session, tables=tables),
                                        is_combined=True)
-    client.kline(symbol=symbol, interval=interval)
+    for symbol in symbols:
+        client.kline(symbol=symbol, interval=interval)
     time.sleep(duration)
     client.stop()
 
 
-def stream_to_db(symbol: str, table_name: str, duration: int, interval: str,
+def stream_to_db(symbols_to_table_names: Dict[str, str], duration: int, interval: str,
                  connection_string: str, replace_existing: bool = True) -> None:
     db = sa.create_engine(connection_string)
     Session = sessionmaker(bind=db)
-    Base = declarative_base(metadata=sa.MetaData(schema='TickerData'))
-    Kline = create_kline_table(table_name=table_name, base=Base)
+    tables = {symbol.lower(): create_kline_table(table_name=symbols_to_table_names[symbol]) for symbol in
+              symbols_to_table_names}
     if replace_existing:
-        Base.metadata.drop_all(db)
-    Base.metadata.create_all(db)
+        for table in tables.values():
+            table.metadata.drop_all(db)
+    for table in tables.values():
+        table.metadata.create_all(db)
     with Session() as session:
-        stream_data(duration=duration, interval=interval, session=session, symbol=symbol, table=Kline)
+        stream_data(duration=duration, interval=interval, session=session,
+                    symbols=symbols_to_table_names.keys(), tables=tables)
