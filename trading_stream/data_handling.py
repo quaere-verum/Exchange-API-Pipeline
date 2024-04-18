@@ -4,10 +4,13 @@ from concurrent.futures import ProcessPoolExecutor
 
 
 class DataHandler:
-    def __init__(self, model: Any) -> None:
+    def __init__(self, model: Any, symbols: List[str]) -> None:
         self.model = model
-        self.ticker_array = np.zeros(shape=model.params['ticker_shape'], dtype=np.float32)
-        self.features_array = np.zeros(shape=model.params['features_shape'], dtype=np.float32)
+        self.symbols = symbols
+        self.ticker_shape = model.params['ticker_shape']
+        self.features_shape = model.params['features_shape']
+        self.ticker_array = np.zeros(shape=self.ticker_shape*len(symbols), dtype=np.float32)
+        self.features_array = np.zeros(shape=self.features_shape, dtype=np.float32)
         self.n_updates = 0
         self.feature_calculator = FeatureCalculator(features=model.features,
                                                     use_multiprocessing=False)
@@ -15,20 +18,25 @@ class DataHandler:
         valid_model = self._validate_model()
         if not valid_model:
             raise ValueError('Model configured incorrectly.')
-        self.last_timestamp = None
+        self.last_timestamp = {symbol: 0 for symbol in self.symbols}
 
-    def update(self, timestamp: int, data: np.ndarray) -> bool:
-        if timestamp == self.last_timestamp:
+    def update(self, timestamp: int, symbol: str, data: np.ndarray) -> bool:
+        if timestamp == self.last_timestamp[symbol]:
             return False
         else:
-            self.last_timestamp = timestamp
-            self.n_updates += 1
-            self.ticker_array[0:-1, :] = self.ticker_array[1:, :]
-            self.ticker_array[-1] = data
-            features = self.feature_calculator.calculate_features(self.ticker_array)
-            self.features_array[0:-1, :] = self.features_array[1:, :]
-            self.features_array[-1] = features
-            return True
+            index = self.symbols.index(symbol)
+            self.last_timestamp[symbol] = timestamp
+            self.ticker_array[0:-1, :][index*self.ticker_shape[1]:(index+1)*self.ticker_shape[1]] = \
+            self.ticker_array[1:, :][index*self.ticker_shape[1]:(index+1)*self.ticker_shape[1]]
+            self.ticker_array[-1, index*self.ticker_shape[1]:(index+1)*self.ticker_shape[1]] = data
+            if np.min(list(self.last_timestamp.values())) == timestamp:
+                features = self.feature_calculator.calculate_features(self.ticker_array)
+                self.features_array[0:-1, :] = self.features_array[1:, :]
+                self.features_array[-1] = features
+                self.n_updates += 1
+                return True
+            else:
+                return False
 
     def _validate_model(self) -> bool:
         try:
@@ -69,7 +77,7 @@ class FeatureCalculator:
                 for feature in self.features:
                     futures.append(executor.submit(feature, ticker_data))
             ind = 0
-            for future in enumerate(futures):
+            for future in futures:
                 result = future.result()
                 if isinstance(result, (float, int)):
                     features[ind] = result
@@ -79,7 +87,7 @@ class FeatureCalculator:
                     ind += len(result)
         else:
             ind = 0
-            for feature in enumerate(self.features):
+            for feature in self.features:
                 result = feature(ticker_data)
                 if isinstance(result, (float, int, np.float32, np.int32, np.float64, np.int64)):
                     features[ind] = result

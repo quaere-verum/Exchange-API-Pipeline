@@ -8,11 +8,11 @@ from typing import Callable, Union, List
 class TradingModel:
     def __init__(self) -> None:
         self.params = {
-            'ticker_shape': None,
-            'features_shape': None,
+            'ticker_shape': (10, 6),
+            'features_shape': (3, 1),
         }
         self.features = [rolling_mean(window=10,
-                                      column=0)
+                                      columns=0)
         ]
         self.n_features = 1
 
@@ -20,7 +20,7 @@ class TradingModel:
         return 0
 
 
-def rolling_mean(window: int, column: Union[int, List[int], np.ndarray]) -> Callable[[np.ndarray], Union[float, np.ndarray]]:
+def rolling_mean(window: int, columns: Union[int, List[int], np.ndarray]) -> Callable[[np.ndarray], Union[float, np.ndarray]]:
     def func(ticker_data):
         return np.mean(ticker_data[len(ticker_data)-window:][:, columns])
     return func
