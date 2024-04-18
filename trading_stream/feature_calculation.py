@@ -4,10 +4,10 @@ from typing import Dict, Callable, Union, Any, List
 
 
 class FeatureCalculator:
-    def __init__(self, features: List[Callable[[np.ndarray], Dict[str, Union[np.ndarray, int, float]]]],
-                 use_multiprocessing: bool = False) -> None:
+    def __init__(self, features: List[Callable[[np.ndarray], Union[np.ndarray, float]]],
+                 n_features: int, use_multiprocessing: bool = False) -> None:
         self.features = features
-        self.n_features = len(self.features)
+        self.n_features = n_features
         self.use_multiprocessing = use_multiprocessing
 
     def __len__(self) -> int:
@@ -20,8 +20,12 @@ class FeatureCalculator:
             with ProcessPoolExecutor() as executor:
                 for feature in self.features:
                     futures.append(executor.submit(feature, ticker_data))
-            for future in futures:
-                features[future.result()['position']] = future.result()['value']
+            for k, future in enumerate(futures):
+                result = future.result()
+                if isinstance(result, (float, int)):
+                    features[k] = result
+                else:
+                    features[k:k+len(result)] = result
         else:
             for feature in self.features:
                 result = feature(ticker_data)
