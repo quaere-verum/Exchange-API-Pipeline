@@ -19,9 +19,9 @@ class DataHandler:
             self.last_updated = data['timestamp']
 
 
-def create_kline_table(symbol: str, base: Any) -> Any:
+def create_kline_table(table_name: str, base: Any) -> Any:
     class Kline(base):
-        __tablename__ = symbol
+        __tablename__ = table_name
         timestamp: Mapped[int] = mapped_column(primary_key=True)
         close: Mapped[float]
         base_asset_volume: Mapped[float]
@@ -58,12 +58,12 @@ def stream_data(duration: int, interval: str, session: Any, symbol: str, table: 
     client.stop()
 
 
-def stream_to_db(symbol: str, duration: int, interval: str, connection_string: str, replace_existing: bool = True)\
-        -> None:
+def stream_to_db(symbol: str, table_name: str, duration: int, interval: str,
+                 connection_string: str, replace_existing: bool = True) -> None:
     db = sa.create_engine(connection_string)
     Session = sessionmaker(bind=db)
     Base = declarative_base(metadata=sa.MetaData(schema='TickerData'))
-    Kline = create_kline_table(symbol, Base)
+    Kline = create_kline_table(table_name=table_name, base=Base)
     if replace_existing:
         Base.metadata.drop_all(db)
     Base.metadata.create_all(db)
