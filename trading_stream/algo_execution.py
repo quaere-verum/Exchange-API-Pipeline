@@ -35,6 +35,7 @@ class DataHandler:
 
     def validate_model(self) -> bool:
         try:
+            self.feature_calculator.get_n_features(self.ticker_array)
             self.feature_calculator.calculate_features(self.ticker_array)
             self.model.predict(self.features_array)
             return True
