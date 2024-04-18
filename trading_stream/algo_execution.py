@@ -15,9 +15,9 @@ class DataHandler:
         self.ticker_array = np.zeros(shape=model.params['ticker_shape'], dtype=np.float32)
         self.features_array = np.zeros(shape=model.params['features_shape'], dtype=np.float32)
         self.n_updates = 0
-        self.feature_calculator = FeatureCalculator(features=model.features, 
-                                                    n_features=model.n_features,
+        self.feature_calculator = FeatureCalculator(features=model.features,
                                                     use_multiprocessing=False)
+        self.feature_calculator.get_n_features(self.ticker_array)
         self.last_timestamp = None
 
     def update(self, timestamp: int, data: np.ndarray) -> bool:
@@ -35,7 +35,6 @@ class DataHandler:
 
     def validate_model(self) -> bool:
         try:
-            self.feature_calculator.get_n_features(self.ticker_array)
             self.feature_calculator.calculate_features(self.ticker_array)
             self.model.predict(self.features_array)
             return True
