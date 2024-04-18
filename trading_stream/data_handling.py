@@ -68,17 +68,23 @@ class FeatureCalculator:
             with ProcessPoolExecutor() as executor:
                 for feature in self.features:
                     futures.append(executor.submit(feature, ticker_data))
-            for k, future in enumerate(futures):
+            ind = 0
+            for future in enumerate(futures):
                 result = future.result()
                 if isinstance(result, (float, int)):
-                    features[k] = result
+                    features[ind] = result
+                    ind += 1
                 else:
-                    features[k:k+len(result)] = result
+                    features[ind:ind+len(result)] = result
+                    ind += len(result)
         else:
-            for k, feature in enumerate(self.features):
+            ind = 0
+            for feature in enumerate(self.features):
                 result = feature(ticker_data)
                 if isinstance(result, (float, int, np.float32, np.int32, np.float64, np.int64)):
-                    features[k] = result
+                    features[ind] = result
+                    ind += 1
                 else:
-                    features[k:k+len(result)] = result
+                    features[ind:ind+len(result)] = result
+                    ind += len(result)
         return features
