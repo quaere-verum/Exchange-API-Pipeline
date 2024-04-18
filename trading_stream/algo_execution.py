@@ -1,6 +1,6 @@
 import numpy as np
 from binance.websocket.spot.websocket_stream import SpotWebsocketStreamClient
-from feature_calculation import FeatureCalculator
+from data_handling import DataHandler
 from config import TradingModel
 import json
 import time
@@ -9,47 +9,8 @@ from typing import Any, Callable
 DATAFOLDER = os.environ['DATAFOLDER']
 
 
-class DataHandler:
-    def __init__(self, model: Any) -> None:
-        self.model = model
-        self.ticker_array = np.zeros(shape=model.params['ticker_shape'], dtype=np.float32)
-        self.features_array = np.zeros(shape=model.params['features_shape'], dtype=np.float32)
-        self.n_updates = 0
-        self.feature_calculator = FeatureCalculator(features=model.features,
-                                                    use_multiprocessing=False)
-        self.feature_calculator.get_n_features(self.ticker_array)
-        self.last_timestamp = None
-
-    def update(self, timestamp: int, data: np.ndarray) -> bool:
-        if timestamp == self.last_timestamp:
-            return False
-        else:
-            self.last_timestamp = timestamp
-            self.n_updates += 1
-            self.ticker_array[0:-1, :] = self.ticker_array[1:, :]
-            self.ticker_array[-1] = data
-            features = self.feature_calculator.calculate_features(self.ticker_array)
-            self.features_array[0:-1, :] = self.features_array[1:, :]
-            self.features_array[-1] = features
-            return True
-
-    def validate_model(self) -> bool:
-        try:
-            self.feature_calculator.calculate_features(self.ticker_array)
-            self.model.predict(self.features_array)
-            return True
-        except:
-            return False
-
-    def predict(self) -> Any:
-        return self.model.predict(self.features_array)
-
-
 def kline_stream_handler() -> Callable[[str, str], None]:
     data_handler = DataHandler(TradingModel())
-    valid_model = data_handler.validate_model()
-    if not valid_model:
-        raise ValueError('Model configured incorrectly.')
 
     def message_handler(_, message: str) -> None:
         info = json.loads(message)['data']
