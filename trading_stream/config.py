@@ -14,6 +14,7 @@ class TradingModel:
         self.features = [rolling_mean(window=10,
                                       column=0)
         ]
+        self.n_features = 1
 
     def predict(self, features: np.ndarray) -> float:
         return 0
