@@ -26,8 +26,8 @@ class DataHandler:
         else:
             index = self.symbols.index(symbol)
             self.last_timestamp[symbol] = timestamp
-            self.ticker_array[0:-1, :][index*self.ticker_shape[1]:(index+1)*self.ticker_shape[1]] = \
-            self.ticker_array[1:, :][index*self.ticker_shape[1]:(index+1)*self.ticker_shape[1]]
+            self.ticker_array[0:-1, :][:, index*self.ticker_shape[1]:(index+1)*self.ticker_shape[1]] = \
+            self.ticker_array[1:, :][:, index*self.ticker_shape[1]:(index+1)*self.ticker_shape[1]]
             self.ticker_array[-1, index*self.ticker_shape[1]:(index+1)*self.ticker_shape[1]] = data
             if np.min(list(self.last_timestamp.values())) == timestamp:
                 features = self.feature_calculator.calculate_features(self.ticker_array)
