@@ -33,12 +33,23 @@ class DataHandler:
             self.features_array[-1] = features
             return True
 
+    def validate_model(self) -> bool:
+        try:
+            self.feature_calculator.calculate_features(self.ticker_array)
+            self.model.predict(self.features_array)
+            return True
+        except:
+            return False
+
     def predict(self) -> Any:
         return self.model.predict(self.features_array)
 
 
 def kline_stream_handler() -> Callable[[str, str], None]:
     data_handler = DataHandler(TradingModel())
+    valid_model = data_handler.validate_model()
+    if not valid_model:
+        raise ValueError('Model configured incorrectly.')
 
     def message_handler(_, message: str) -> None:
         info = json.loads(message)['data']
