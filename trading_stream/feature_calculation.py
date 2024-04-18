@@ -27,7 +27,10 @@ class FeatureCalculator:
                 else:
                     features[k:k+len(result)] = result
         else:
-            for feature in self.features:
+            for k, feature in enumerate(self.features):
                 result = feature(ticker_data)
-                features[result['position']] = result['value']
+                if isinstance(result, (float, int)):
+                    features[k] = result
+                else:
+                    features[k:k+len(result)] = result
         return features
