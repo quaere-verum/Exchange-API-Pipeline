@@ -1,11 +1,11 @@
 import numpy as np
 from binance.websocket.spot.websocket_stream import SpotWebsocketStreamClient
 from data_handling import DataHandler
-from config import TradingModel, trading_logic
+from config import TradingModel
 import json
 import time
 import os
-from typing import Any, Callable, List
+from typing import Callable, List
 DATAFOLDER = os.environ['DATAFOLDER']
 
 
@@ -23,8 +23,7 @@ def kline_stream_handler(symbols: List[str], interval: str) -> Callable[[str, st
                         info['k']['n']])
         updated = data_handler.update(timestamp=info['k']['T'], symbol=info['s'].lower(), data=data)
         if updated:
-            prediction = data_handler.predict()
-            trading_logic(prediction)
+            data_handler.trade()
 
     return message_handler
 

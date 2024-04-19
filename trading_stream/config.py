@@ -8,7 +8,7 @@ class TradingModel:
     def __init__(self) -> None:
         self.params = {
             'ticker_history_length': 10,
-            'features_shape': (3, 1),
+            'features_history_length': 3,
         }
         self.features = [rolling_mean(window=10,
                                       columns=0)
