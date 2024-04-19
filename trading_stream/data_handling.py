@@ -4,6 +4,7 @@ from concurrent.futures import ProcessPoolExecutor
 import requests
 from datetime import datetime, timedelta
 import time
+import logging
 
 
 class DataHandler:
@@ -25,6 +26,7 @@ class DataHandler:
         valid_model = self._validate_model()
         if not valid_model:
             raise ValueError('Model configured incorrectly.')
+
         self._initialise_arrays()
         self.last_timestamp = {symbol: 0 for symbol in self.symbols}
 
@@ -32,6 +34,7 @@ class DataHandler:
         try:
             self.calculate_features(self.ticker_array)
             self.model.trade(self.features_array)
+            logging.info('Model validated.')
             return True
         except:
             return False
@@ -72,6 +75,7 @@ class DataHandler:
         for k in range(self.features_array.shape[0]):
             ticker_data = ticker_storage[k:k+self.ticker_history_length, :]
             self.features_array[k] = self.calculate_features(ticker_data)
+        logging.info('Arrays initialised.')
 
     def calculate_features(self, ticker_data: np.ndarray) -> np.ndarray:
         features = np.zeros(self.n_features)
@@ -120,8 +124,4 @@ class DataHandler:
 
     def trade(self) -> None:
         self.model.trade(self.features_array)
-
-
-if __name__ == '__main__':
-    from config import TradingModel
-    test = DataHandler(model=TradingModel(), symbols=['ethusdt', 'btcusdt'], interval='1m')
+        logging.info('Trade executed.')
