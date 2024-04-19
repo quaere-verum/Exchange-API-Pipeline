@@ -123,5 +123,7 @@ class DataHandler:
                 return False
 
     def trade(self) -> None:
-        self.model.trade(self.features_array)
+        self.model.trade(features=self.features_array,
+                         prices=dict(zip(self.symbols, self.ticker_array[-1, 6*np.arange(len(self.symbols))]))
+                         )
         logging.info('Trade executed.')
