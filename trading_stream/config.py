@@ -1,5 +1,4 @@
-# This file should implement the TradingModel class which implements a .predict method.
-# See the feature_calculation class for details on how this is used.
+# This file should implement the TradingModel class which implements a .trade method taking features as input.
 # Include all the relevant import statements, create features and load the relevant models.
 import numpy as np
 from typing import Callable, Union, List
@@ -8,7 +7,7 @@ from typing import Callable, Union, List
 class TradingModel:
     def __init__(self) -> None:
         self.params = {
-            'ticker_shape': (10, 6),
+            'ticker_history_length': 10,
             'features_shape': (3, 1),
         }
         self.features = [rolling_mean(window=10,
@@ -16,8 +15,8 @@ class TradingModel:
         ]
         self.n_features = 1
 
-    def predict(self, features: np.ndarray) -> float:
-        return 0
+    def trade(self, features: np.ndarray) -> None:
+        return
 
 
 def rolling_mean(window: int, columns: Union[int, List[int], np.ndarray]) -> Callable[[np.ndarray], Union[float, np.ndarray]]:

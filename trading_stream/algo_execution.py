@@ -1,7 +1,7 @@
 import numpy as np
 from binance.websocket.spot.websocket_stream import SpotWebsocketStreamClient
 from data_handling import DataHandler
-from config import TradingModel
+from config import TradingModel, trading_logic
 import json
 import time
 import os
@@ -9,8 +9,8 @@ from typing import Any, Callable, List
 DATAFOLDER = os.environ['DATAFOLDER']
 
 
-def kline_stream_handler(symbols: List[str]) -> Callable[[str, str], None]:
-    data_handler = DataHandler(TradingModel(), symbols=symbols)
+def kline_stream_handler(symbols: List[str], interval: str) -> Callable[[str, str], None]:
+    data_handler = DataHandler(TradingModel(), symbols=symbols, interval=interval)
 
     def message_handler(_, message: str) -> None:
         info = json.loads(message)['data']
@@ -24,14 +24,13 @@ def kline_stream_handler(symbols: List[str]) -> Callable[[str, str], None]:
         updated = data_handler.update(timestamp=info['k']['T'], symbol=info['s'].lower(), data=data)
         if updated:
             prediction = data_handler.predict()
-            # Implement trade execution based on model prediction
-            print(prediction)
+            trading_logic(prediction)
 
     return message_handler
 
 
 def algo_trading(duration: int, interval: str, symbols: List[str]) -> None:
-    client = SpotWebsocketStreamClient(on_message=kline_stream_handler(symbols), is_combined=True)
+    client = SpotWebsocketStreamClient(on_message=kline_stream_handler(symbols, interval), is_combined=True)
     for symbol in symbols:
         client.kline(symbol=symbol, interval=interval)
     time.sleep(duration)
