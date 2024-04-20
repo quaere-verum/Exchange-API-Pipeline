@@ -33,7 +33,7 @@ class DataHandler:
     def _validate_model(self) -> bool:
         try:
             self.calculate_features(self.ticker_array)
-            self.model.trade(self.features_array)
+            self.trade()
             logging.info('Model validated.')
             return True
         except:

@@ -5,8 +5,8 @@ from binance.spot import Spot
 from typing import Callable, Union, List, Dict
 import time
 import os
-API_KEY = os.environ['BINANCE_API_KEY']
-SECRET_KEY = os.environ['BINANCE_SECRET_KEY']
+API_KEY = os.environ['BINANCE_TESTNET_API_KEY']
+SECRET_KEY = os.environ['BINANCE_TESTNET_API_SECRET']
 api_url = 'https://testnet.binance.vision'
 client = Spot(api_key=API_KEY, api_secret=SECRET_KEY, **{'base_url': api_url})
 
