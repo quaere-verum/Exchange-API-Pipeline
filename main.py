@@ -4,8 +4,8 @@ SQL_PASSWORD = os.environ['SQL_PASSWORD']
 
 
 def main():
-    duration = 60*60*24
-    interval = '1m'
+    duration = 60
+    interval = '1s'
     connection_string = f"postgresql://localhost/Crypto?user=postgres&password={SQL_PASSWORD}"
     replace_existing = True
     symbols = ['ethusdt', 'btcusdt']

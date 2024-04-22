@@ -34,8 +34,7 @@ def create_kline_table(table_name: str) -> Any:
     return Kline
 
 
-def kline_stream_handler(session: Any, tables: Any) -> Callable[[str, str], None]:
-    table_handler = TableHandler(tables)
+def kline_stream_handler(session: Any, table_handler: TableHandler) -> Callable[[str, str], None]:
 
     def message_handler(_, message):
         info = json.loads(message)['data']
@@ -53,17 +52,20 @@ def kline_stream_handler(session: Any, tables: Any) -> Callable[[str, str], None
 
 
 def stream_data(duration: int, interval: str, session: Any, symbols: Iterable, tables: Any) -> None:
-    refresh_seconds = 12*60*60
+    table_handler = TableHandler(tables)
+    refresh_seconds = 3600
     nr_refreshes = duration//refresh_seconds
     remaining_time = duration % refresh_seconds
     for _ in range(nr_refreshes):
-        client = SpotWebsocketStreamClient(on_message=kline_stream_handler(session=session, tables=tables),
+        client = SpotWebsocketStreamClient(on_message=kline_stream_handler(session=session,
+                                                                           table_handler=table_handler),
                                            is_combined=True)
         for symbol in symbols:
             client.kline(symbol=symbol, interval=interval)
         time.sleep(refresh_seconds)
         client.stop()
-    client = SpotWebsocketStreamClient(on_message=kline_stream_handler(session=session, tables=tables),
+    client = SpotWebsocketStreamClient(on_message=kline_stream_handler(session=session,
+                                                                       table_handler=table_handler),
                                        is_combined=True)
     for symbol in symbols:
         client.kline(symbol=symbol, interval=interval)

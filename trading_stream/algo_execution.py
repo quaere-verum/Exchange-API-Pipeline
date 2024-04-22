@@ -9,8 +9,7 @@ from typing import Callable, List
 DATAFOLDER = os.environ['DATAFOLDER']
 
 
-def kline_stream_handler(symbols: List[str], interval: str) -> Callable[[str, str], None]:
-    data_handler = DataHandler(TradingModel(), symbols=symbols, interval=interval)
+def kline_stream_handler(data_handler: DataHandler) -> Callable[[str, str], None]:
 
     def message_handler(_, message: str) -> None:
         info = json.loads(message)['data']
@@ -28,17 +27,18 @@ def kline_stream_handler(symbols: List[str], interval: str) -> Callable[[str, st
     return message_handler
 
 
-def algo_trading(duration: int, interval: str, symbols: List[str]) -> None:
-    refresh_seconds = 12 * 60 * 60
-    nr_refreshes = duration // refresh_seconds
-    remaining_time = duration % refresh_seconds
+def algo_trading(duration: int, interval: str, symbols: List[str], websocket_refresh_seconds: int = 43200) -> None:
+    data_handler = DataHandler(TradingModel(), symbols=symbols, interval=interval)
+    nr_refreshes = duration // websocket_refresh_seconds
+    remaining_time = duration % websocket_refresh_seconds
     for _ in range(nr_refreshes):
-        client = SpotWebsocketStreamClient(on_message=kline_stream_handler(symbols, interval), is_combined=True)
+        client = SpotWebsocketStreamClient(on_message=kline_stream_handler(data_handler=data_handler),
+                                           is_combined=True)
         for symbol in symbols:
             client.kline(symbol=symbol, interval=interval)
         time.sleep(duration)
         client.stop()
-    client = SpotWebsocketStreamClient(on_message=kline_stream_handler(symbols, interval),
+    client = SpotWebsocketStreamClient(on_message=kline_stream_handler(data_handler=data_handler),
                                        is_combined=True)
     for symbol in symbols:
         client.kline(symbol=symbol, interval=interval)
