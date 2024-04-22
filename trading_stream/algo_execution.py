@@ -29,10 +29,20 @@ def kline_stream_handler(symbols: List[str], interval: str) -> Callable[[str, st
 
 
 def algo_trading(duration: int, interval: str, symbols: List[str]) -> None:
-    client = SpotWebsocketStreamClient(on_message=kline_stream_handler(symbols, interval), is_combined=True)
+    refresh_seconds = 12 * 60 * 60
+    nr_refreshes = duration // refresh_seconds
+    remaining_time = duration % refresh_seconds
+    for _ in range(nr_refreshes):
+        client = SpotWebsocketStreamClient(on_message=kline_stream_handler(symbols, interval), is_combined=True)
+        for symbol in symbols:
+            client.kline(symbol=symbol, interval=interval)
+        time.sleep(duration)
+        client.stop()
+    client = SpotWebsocketStreamClient(on_message=kline_stream_handler(symbols, interval),
+                                       is_combined=True)
     for symbol in symbols:
         client.kline(symbol=symbol, interval=interval)
-    time.sleep(duration)
+    time.sleep(remaining_time)
     client.stop()
 
 
